@@ -10,70 +10,128 @@ options = webdriver.ChromeOptions()
 turnOnVNC = {"enableVNC": True}
 options.set_capability("selenoid:options", turnOnVNC)
 
-users = [["egi6ban@yahoo.co.jp", "kami5ban"], ["udemy1013@gmail.com", "tanoshiku1"], ["", ""]]
+users = [["egi6ban@yahoo.co.jp", "kami5baaaan"], ["udemy1013@gmail.com", "tanoshiku1"], ["", ""]]
 
 # Chromeをselenoidで立ち上げ
+driver_twitter = webdriver.Remote(
+    command_executor='http://localhost:4444/wd/hub',
+    options=options
+)
+
+driver_amazon = webdriver.Remote(
+    command_executor='http://localhost:4444/wd/hub',
+    options=options
+)
+
+wait_twitter = WebDriverWait(driver_twitter, 10)
+wait_amazon = WebDriverWait(driver_amazon, 10)
 
 
-def main(email, password):
-
-    driver = webdriver.Remote(
-        command_executor='http://localhost:4444/wd/hub',
-        options=options
-    )
-
-    wait = WebDriverWait(driver, 10)
-
+def amazon_login(email, password):
     # 指定のページに移動
-    driver.get("https://www.amazon.co.jp/dp/B08WB9FZ5D?_encoding=UTF8&m=AN1VRQENFRJN5&linkCode=sl1&tag=pokeyoyaku-22&linkId=b2879a95441ff1a013be62f774e62efa&language=ja_JP&ref_=as_li_ss_tl")
+    driver_amazon.get(
+        "https://www.amazon.co.jp/dp/B08WB9FZ5D?_encoding=UTF8&m=AN1VRQENFRJN5&linkCode=sl1&tag=pokeyoyaku-22&linkId=b2879a95441ff1a013be62f774e62efa&language=ja_JP&ref_=as_li_ss_tl")
 
     # ログインボタンをクリック
-    driver.find_element(By.XPATH, '//*[@id="nav-link-accountList"]').click()
+    driver_amazon.find_element(By.XPATH, '//*[@id="nav-link-accountList"]').click()
 
     # メールアドレスをクリックして次へをクリック
-    name_input = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ap_email"]')))
-    driver.find_element(By.XPATH, '//*[@id="ap_email"]').send_keys(email)
-    driver.find_element(By.XPATH, '//*[@id="continue"]').click()
+    name_input = wait_amazon.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ap_email"]')))
+    driver_amazon.find_element(By.XPATH, '//*[@id="ap_email"]').send_keys(email)
+    driver_amazon.find_element(By.XPATH, '//*[@id="continue"]').click()
 
-    name_input = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ap_password"]')))
-    driver.find_element(By.XPATH, '//*[@id="ap_password"]').send_keys(password)
-    driver.find_element(By.XPATH, '//*[@id="signInSubmit"]').click()
-    time.sleep(3)
+    name_input = wait_amazon.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ap_password"]')))
+    driver_amazon.find_element(By.XPATH, '//*[@id="ap_password"]').send_keys(password)
+    driver_amazon.find_element(By.XPATH, '//*[@id="signInSubmit"]').click()
+    time.sleep(20)
+
+
+def get_tweet():
+    driver_twitter.get("https://twitter.com/pokecayoyaku")
+    wait_twitter.until(EC.element_to_be_clickable((By.XPATH,
+                                                   '/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/div[2]/div/div/section/div/div/div[2]/div/div/div/article/div/div/div/div[2]/div[2]/div[2]/div[1]/div/span[1]')))
+    tweet_text = driver_twitter.find_element(By.XPATH,
+                                             '/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/div[2]/div/div/section/div/div/div[2]/div/div/div/article/div/div/div/div[2]/div[2]/div[2]/div[1]/div/span[1]').text
+
+    latest_time = return_seconds(driver_twitter.find_element(By.XPATH, '/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/div[2]/div/div/section/div/div/div[2]/div/div/div/article/div/div/div/div[2]/div[2]/div[1]/div/div/div[1]/div/div/div[2]/div/div[3]/a/time').text)
+
+    print(latest_time)
 
     trying = True
+    count = 0
 
     while trying:
-        try:
-            driver.find_element(By.XPATH,
-                                '//*[@id="corePriceDisplay_desktop_feature_div"]/div[1]/span/span[2]/span[2]').click()
-        except:
-            driver.get(
-                "https://www.amazon.co.jp/dp/B08WB9FZ5D?_encoding=UTF8&m=AN1VRQENFRJN5&linkCode=sl1&tag=pokeyoyaku-22&linkId=b2879a95441ff1a013be62f774e62efa&language=ja_JP&ref_=as_li_ss_tl")
+        wait_twitter.until(EC.element_to_be_clickable((By.XPATH,
+                                                       '/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/div[2]/div/div/section/div/div/div[2]/div/div/div/article/div/div/div/div[2]/div[2]/div[2]/div[1]/div/span[1]')))
+        current_time = return_seconds(driver_twitter.find_element(By.XPATH, '/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/div[2]/div/div/section/div/div/div[2]/div/div/div/article/div/div/div/div[2]/div[2]/div[1]/div/div/div[1]/div/div/div[2]/div/div[3]/a/time').text)
+        if count % 50 == 0:
+            driver_amazon.refresh()
+            print("amazon driverをリフレッシュ")
+
+        # もし最新の投稿が最後の投稿より新しければ
+        if current_time > latest_time:
+
+            # フュージョンアーツかイーブイの投稿であればURLをクリックさせる
+            if "フュージョン" in tweet_text or "イーブイ" in tweet_text:
+                target_url = driver_twitter.find_element(By.XPATH,
+                                                         '/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/div[2]/div/div/section/div/div/div[2]/div/div/div/article/div/div/div/div[2]/div[2]/div[2]/div[1]/div/a').text
+                driver_amazon.get(target_url)
+                print("HITTTTTTTTTTTT")
+                wait_amazon.until(EC.element_to_be_clickable((By.XPATH,
+                                                               '/html/body/div[2]/span/span/span/div/div/div[2]/div/div[1]/div/div[2]/div[3]/div/div[2]/span/span/span/span')))
+                price = int("".join(filter(str.isdigit, driver_amazon.find_element(By.XPATH,  '/html/body/div[2]/span/span/span/div/div/div[2]/div/div[1]/div/div[2]/div[3]/div/div[2]/span/span/span/span').text)))
+                print(price)
+                if price < 5200:
+                    trying = False
+                    break
+            # フュージョンアーツかイーブイの投稿でなければ最後の投稿時間を今の時間にする
+            latest_time = current_time
+            print("これは目的の投稿ではないよ")
         else:
-            driver.find_element(By.XPATH, '//*[@id="submit.buy-now"]').click()
-            trying = False
+            print("新しい投稿はまだだよ")
+            driver_twitter.get("https://twitter.com/pokecayoyaku")
+        count += 1
 
-    # # メイン商品の価格を抽出
-    # core_price = int(
-    #     driver.find_element(By.XPATH, '//*[@id="corePrice_feature_div"]/div/div/span/span[2]/span[2]').text.replace(",",
-    #                                                                                                                 ""))
-    # target_price = 5200
-    # while core_price > target_price:
-    #     if core_price < target_price:
-    #         break
-    #     else:
-    #         driver.get("https://www.amazon.co.jp/dp/B08WB9FZ5D?_encoding=UTF8&m=AN1VRQENFRJN5&linkCode=sl1&tag=pokeyoyaku-22&linkId=b2879a95441ff1a013be62f774e62efa&language=ja_JP&ref_=as_li_ss_tl")
-    #         wait.until(
-    #             EC.element_to_be_clickable((By.XPATH, '//*[@id="corePrice_feature_div"]/div/div/span/span[2]/span[2]')))
-    #         core_price = int(driver.find_element(By.XPATH,
-    #                                              '//*[@id="corePrice_feature_div"]/div/div/span/span[2]/span[2]').text.replace(
-    #             ",", ""))
-    #         print("try again")
 
-    # driver.find_element(By.XPATH, '//*[@id="submit.buy-now"]').click()
-    wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="submitOrderButtonId"]/span')))
-    driver.find_element(By.XPATH, '//*[@id="submitOrderButtonId"]/span').click()
-    print("イーブイヒーローズが買えたよ")
+def buy_product():
+
+    driver_amazon.find_element(By.XPATH, '/html/body/div[2]/span/span/span/div/div/div[2]/div/div[1]/div/div[2]/div[3]/div/div[2]/span/span/span/span').click()
+    time.sleep(2)
+    driver_amazon.find_element(By.XPATH, '//*[@id="aod-close"]/span/span').click()
+
+    # 商品ページからカートページへ
+    wait_amazon.until(
+        EC.element_to_be_clickable((By.XPATH, '//*[@id="nav-cart"]')))
+    driver_amazon.find_element(By.XPATH, '//*[@id="nav-cart"]').click()
+
+    # カートページ
+    wait_amazon.until(
+        EC.element_to_be_clickable((driver_amazon.find_element(By.XPATH, '//*[@id="sc-buy-box-ptc-button"]/span'))))
+    driver_amazon.find_element(By.XPATH, '//*[@id="sc-buy-box-ptc-button"]/span').click()
+
+    # 決済ページ
+    wait_amazon.until(
+        EC.element_to_be_clickable(
+            (By.XPATH, '//*[@id="orderSummaryPrimaryActionBtn"]/span')))
+    driver_amazon.find_element(By.XPATH, '//*[@id="orderSummaryPrimaryActionBtn"]/span').click()
+    wait_amazon.until(
+        EC.element_to_be_clickable(
+            (By.XPATH, '//*[@id="submitOrderButtonId"]/span')))
+    driver_amazon.find_element(By.XPATH, '//*[@id="submitOrderButtonId"]/span').click()
+
+
+def return_seconds(text):
+
+    result = 0
+    text_letter = "".join(filter(str.isalpha, text))
+    text_number = int("".join(filter(str.isdigit, text)))
+
+    if text_letter == "h":
+        return text_number * 60 * 60
+    elif text_letter == "m":
+        return text_number * 60
+    elif text_letter == "s":
+        return text_number
 
 
 def scan(user_num):
@@ -82,19 +140,19 @@ def scan(user_num):
     target_button = ""
 
     # # 出品されている商品一覧をクリック
-    # driver.find_element(By.XPATH, '//*[@id="olpLinkWidget_feature_div"]/div[2]/span/a').click()
+    # driver_amazon.find_element(By.XPATH, '//*[@id="olpLinkWidget_feature_div"]/div[2]/span/a').click()
     #
     # # 出品されている商品一覧を代入
     # wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="aod-offer-list"]')))
     #
-    # driver.find_element(By.XPATH, '//*[@id="aod-filter-component"]').click()
+    # driver_amazon.find_element(By.XPATH, '//*[@id="aod-filter-component"]').click()
     # wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="new"]/div/label/input')))
-    # driver.find_element(By.XPATH, '//*[@id="new"]/div/label').click()
-    # driver.find_element(By.XPATH, '//*[@id="aod-filter-component"]').click()
+    # driver_amazon.find_element(By.XPATH, '//*[@id="new"]/div/label').click()
+    # driver_amazon.find_element(By.XPATH, '//*[@id="aod-filter-component"]').click()
     #
     # time.sleep(5)
     #
-    # product_list = driver.find_element(By.XPATH, '//*[@id="aod-offer-list"]')
+    # product_list = driver_amazon.find_element(By.XPATH, '//*[@id="aod-offer-list"]')
     # product_lists = product_list.find_elements(By.XPATH, '//*[@id="aod-offer"]')
     #
     # num = 1
@@ -110,9 +168,15 @@ def scan(user_num):
     # print(target_price)
 
 
-l1 = threading.Thread(target=main, args=(users[0][0], users[0][1]))
-l2 = threading.Thread(target=main, args=(users[1][0], users[1][1]))
-l1.start()
-l2.start()
-time.sleep(15)
+# l1 = threading.Thread(target=main, args=(users[0][0], users[0][1]))
+# l2 = threading.Thread(target=main, args=(users[1][0], users[1][1]))
+# l1.start()
+# l2.start()
+amazon_login(users[1][0], users[1][1])
+get_tweet()
+buy_product()
+time.sleep(60)
+driver_amazon.quit()
+driver_twitter.quit()
+# time.sleep(15)
 print("大成功")
